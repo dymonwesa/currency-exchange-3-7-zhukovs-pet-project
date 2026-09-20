@@ -9,7 +9,7 @@ import java.util.List;
 
 public class CurrencyDAO implements Dao<Integer, Currency>{
 
-    public static final CurrencyDAO INSTANCE = new CurrencyDAO();
+    private static final CurrencyDAO INSTANCE = new CurrencyDAO();
 
     public static final String FIND_ALL = """
             SELECT *
@@ -38,5 +38,9 @@ public class CurrencyDAO implements Dao<Integer, Currency>{
             throw new RuntimeException(e);
         }
         return currencies;
+    }
+
+    public static CurrencyDAO getInstance(){
+        return INSTANCE;
     }
 }
