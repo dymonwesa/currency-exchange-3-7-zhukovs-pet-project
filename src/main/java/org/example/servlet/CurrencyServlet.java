@@ -22,7 +22,19 @@ public class CurrencyServlet extends HttpServlet {
         resp.setCharacterEncoding("UTF-8");
         resp.setContentType("text/plain; charset=UTF-8");
         PrintWriter writer = resp.getWriter();
-        writer.write(currencyDAO.findAll().toString());
+        List<Currency> currencies = currencyDAO.findAll();
+
+        StringBuilder json = new StringBuilder("[");
+        for (int i = 0; i < currencies.size(); i++) {
+            Currency c = currencies.get(i);
+            json.append(String.format(
+                    "{\"id\":%d,\"code\":\"%s\",\"name\":\"%s\",\"sign\":\"%s\"}",
+                    c.getId(), c.getCode(), c.getFullname(), c.getSign()
+            ));
+            if (i < currencies.size() - 1) json.append(",");
+        }
+        json.append("]");
+        writer.write(json.toString());
 
     }
 }
