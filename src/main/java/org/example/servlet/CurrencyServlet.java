@@ -9,6 +9,7 @@ import org.example.dao.CurrencyDAO;
 import org.example.model.Currency;
 
 import java.io.IOException;
+import java.io.PrintWriter;
 import java.util.List;
 
 
@@ -18,7 +19,10 @@ public class CurrencyServlet extends HttpServlet {
 
     @Override
     protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
+        resp.setCharacterEncoding("UTF-8");
+        resp.setContentType("text/plain; charset=UTF-8");
+        PrintWriter writer = resp.getWriter();
+        writer.write(currencyDAO.findAll().toString());
 
-      resp.getWriter();
     }
 }

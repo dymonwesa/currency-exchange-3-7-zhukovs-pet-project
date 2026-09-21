@@ -1,0 +1,17 @@
+<component name="ArtifactManager">
+  <artifact type="war" name="currency-exchange">
+    <output-path>$PROJECT_DIR$/out/artifacts/currency_exchange</output-path>
+    <root id="archive" name="currency-exchange.war">
+      <element id="directory" name="WEB-INF">
+        <element id="directory" name="lib">
+          <element id="library" level="project" name="Maven: com.google.code.gson:gson:2.10.1" />
+          <element id="library" level="project" name="Maven: org.checkerframework:checker-qual:3.42.0" />
+          <element id="library" level="project" name="Maven: org.postgresql:postgresql:42.7.3" />
+        </element>
+        <element id="directory" name="classes">
+          <element id="module-output" name="currency-exchange" />
+        </element>
+      </element>
+    </root>
+  </artifact>
+</component>
