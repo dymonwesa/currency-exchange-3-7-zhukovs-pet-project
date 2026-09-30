@@ -1,0 +1,222 @@
+package org.example.servlet;
+
+import com.google.gson.Gson;
+import jakarta.servlet.ServletException;
+import jakarta.servlet.annotation.WebServlet;
+import jakarta.servlet.http.HttpServlet;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
+import org.example.dao.CurrencyDAO;
+import org.example.model.Currency;
+
+import java.io.IOException;
+import java.io.PrintWriter;
+import java.util.List;
+
+
+@WebServlet("/currency")
+public class CurrencyServlet extends HttpServlet {
+    private final CurrencyDAO currencyDAO = CurrencyDAO.getInstance();
+
+    @Override
+    protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
+        resp.setCharacterEncoding("UTF-8");
+        resp.setContentType("text/plain; charset=UTF-8");
+        PrintWriter writer = resp.getWriter();
+        List<Currency> currencies = currencyDAO.findAll();
+
+       Gson gson = new Gson();
+       String json = gson.toJson(currencies);
+
+        writer.write(json);
+
+    }
+}
+package org.example.util;
+
+import java.sql.Connection;
+import java.sql.DriverManager;
+import java.sql.SQLException;
+
+public class ConnectionManager {
+
+    public static final String URL_KEY = "db.url";
+    public static final String USER_KEY = "db.user";
+    public static final String PASSWORD_KEY = "db.password";
+
+
+    private ConnectionManager(){}
+
+    static {
+        loadDriver();
+    }
+
+    private static void loadDriver() {
+        try{
+            Class.forName("org.postgresql.Driver");
+        } catch (ClassNotFoundException e) {
+            throw new RuntimeException(e);
+        }
+    }
+    public static Connection get(){
+        try{
+            return DriverManager.getConnection(
+                    PropertiesUtil.get(URL_KEY),
+                    PropertiesUtil.get(USER_KEY),
+                    PropertiesUtil.get(PASSWORD_KEY)
+
+            );
+    } catch (SQLException e) {
+            throw new RuntimeException(e);
+        }
+    }
+}
+package org.example.util;
+
+import javax.management.RuntimeMBeanException;
+import java.io.IOException;
+import java.io.InputStream;
+import java.util.Properties;
+
+public class PropertiesUtil {
+    public static final Properties PROPERTIES = new Properties();
+
+    static {
+        loadProperties();
+    }
+
+    private PropertiesUtil(){
+
+    }
+
+    private static void loadProperties() {
+        try (var inputStream = PropertiesUtil.class.getClassLoader().getResourceAsStream("application.properties")) {
+        PROPERTIES.load(inputStream);
+        } catch (IOException e){
+            throw new RuntimeException(e);
+        }
+
+    }
+
+    public static String get(String key){
+        return PROPERTIES.getProperty(key);
+    }
+
+
+}
+package org.example.dao;
+
+import org.example.model.Currency;
+import org.example.util.ConnectionManager;
+
+import java.sql.SQLException;
+import java.util.ArrayList;
+import java.util.List;
+
+public class CurrencyDAO implements Dao<Integer, Currency>{
+
+    private static final CurrencyDAO INSTANCE = new CurrencyDAO();
+
+    public static final String FIND_ALL = """
+            SELECT *
+            FROM currencies;
+            """;
+
+    private CurrencyDAO(){
+    }
+
+
+    @Override
+    public List<Currency> findAll() {
+        List<Currency> currencies = new ArrayList<>();
+        try (var connection = ConnectionManager.get()){
+            var preparedStatement = connection.prepareStatement(FIND_ALL);
+            var resultSet = preparedStatement.executeQuery();
+            while (resultSet.next()){
+                currencies.add(new Currency(
+                        resultSet.getInt("id"),
+                        resultSet.getString("code"),
+                        resultSet.getString("fullname"),
+                        resultSet.getString("sign")
+                        ));
+            }
+        } catch (SQLException e) {
+            throw new RuntimeException(e);
+        }
+        return currencies;
+    }
+
+    public List<Currency> findByCode(String code){
+        return List.of();
+    }
+
+    public static CurrencyDAO getInstance(){
+        return INSTANCE;
+    }
+}
+package org.example.dao;
+
+import java.util.List;
+
+public interface Dao<K, T> {
+    List<T> findAll();
+
+
+}
+package org.example.model;
+
+public class Currency {
+    private int id;
+    private String code;
+    private String fullname;
+    private String sign;
+
+    public Currency(int id, String code, String fullname, String sign) {
+        this.id = id;
+        this.code = code;
+        this.fullname = fullname;
+        this.sign = sign;
+    }
+
+    public int getId() {
+        return id;
+    }
+
+    public void setId(int id) {
+        this.id = id;
+    }
+
+    public String getCode() {
+        return code;
+    }
+
+    public void setCode(String code) {
+        this.code = code;
+    }
+
+    public String getFullname() {
+        return fullname;
+    }
+
+    public void setFullname(String fullname) {
+        this.fullname = fullname;
+    }
+
+    public String getSign() {
+        return sign;
+    }
+
+    public void setSign(String sign) {
+        this.sign = sign;
+    }
+
+    @Override
+    public String toString() {
+        return "Currency{" +
+                "id=" + id +
+                ", code='" + code + '\'' +
+                ", fullname='" + fullname + '\'' +
+                ", sign='" + sign + '\'' +
+                '}';
+    }
+}

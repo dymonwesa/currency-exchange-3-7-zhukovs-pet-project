@@ -1,5 +1,6 @@
 package org.example.servlet;
 
+import com.google.gson.Gson;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.HttpServlet;
@@ -24,17 +25,10 @@ public class CurrencyServlet extends HttpServlet {
         PrintWriter writer = resp.getWriter();
         List<Currency> currencies = currencyDAO.findAll();
 
-        StringBuilder json = new StringBuilder("[");
-        for (int i = 0; i < currencies.size(); i++) {
-            Currency c = currencies.get(i);
-            json.append(String.format(
-                    "{\"id\":%d,\"code\":\"%s\",\"name\":\"%s\",\"sign\":\"%s\"}",
-                    c.getId(), c.getCode(), c.getFullname(), c.getSign()
-            ));
-            if (i < currencies.size() - 1) json.append(",");
-        }
-        json.append("]");
-        writer.write(json.toString());
+       Gson gson = new Gson();
+       String json = gson.toJson(currencies);
+
+        writer.write(json);
 
     }
 }

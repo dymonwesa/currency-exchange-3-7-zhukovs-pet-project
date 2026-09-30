@@ -13,6 +13,9 @@ public class Currency {
         this.sign = sign;
     }
 
+    public Currency() {
+    }
+
     public int getId() {
         return id;
     }
@@ -53,5 +56,14 @@ public class Currency {
                 ", fullname='" + fullname + '\'' +
                 ", sign='" + sign + '\'' +
                 '}';
+    }
+
+    public static Currency getEmpty(){
+        return new Currency(
+                -1,
+                "empty",
+                "empty",
+                "empty"
+        );
     }
 }
