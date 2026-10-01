@@ -3,13 +3,13 @@ package org.example.dao;
 import org.example.model.Currency;
 import org.example.util.ConnectionManager;
 
-import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
+import java.sql.ResultSet;
 
-public class CurrencyDAO implements Dao<Integer, Currency>{
+public class CurrencyDAO implements Dao<Integer, Currency> {
 
     private static final CurrencyDAO INSTANCE = new CurrencyDAO();
 
@@ -19,28 +19,23 @@ public class CurrencyDAO implements Dao<Integer, Currency>{
             """;
 
     public static final String FIND_BY_CODE = """
-           SELECT *
-           FROM currencies
-           WHERE code = ?;
-           """;
+            SELECT *
+            FROM currencies
+            WHERE code = ?;
+            """;
 
-    private CurrencyDAO(){
+    private CurrencyDAO() {
     }
-
 
     @Override
     public List<Currency> findAll() {
         List<Currency> currencies = new ArrayList<>();
-        try (var connection = ConnectionManager.get()){
-            var preparedStatement = connection.prepareStatement(FIND_ALL);
-            var resultSet = preparedStatement.executeQuery();
-            while (resultSet.next()){
-                currencies.add(new Currency(
-                        resultSet.getInt("id"),
-                        resultSet.getString("code"),
-                        resultSet.getString("fullname"),
-                        resultSet.getString("sign")
-                        ));
+        try (var connection = ConnectionManager.get();
+             var preparedStatement = connection.prepareStatement(FIND_ALL);
+             var resultSet = preparedStatement.executeQuery()) {
+
+            while (resultSet.next()) {
+                currencies.add(buildCurrency(resultSet));
             }
         } catch (SQLException e) {
             throw new RuntimeException(e);
@@ -48,39 +43,33 @@ public class CurrencyDAO implements Dao<Integer, Currency>{
         return currencies;
     }
 
-    public Currency findByCode(String code){
-        Currency currency = Currency.getEmpty();
-        try(var connection = ConnectionManager.get()) {
+    public Optional<Currency> findByCode(String code) {
+        try (var connection = ConnectionManager.get();
+             var preparedStatement = connection.prepareStatement(FIND_BY_CODE)) {
 
-            var preparedStatement = connection.prepareStatement(FIND_BY_CODE);
-            preparedStatement.setString(1,code);
-            ResultSet resultSet = preparedStatement.executeQuery();
-            while(resultSet.next()) {
-                Currency tempCurrency = new Currency(
-                        resultSet.getInt("id"),
-                        resultSet.getString("code"),
-                        resultSet.getString("fullname"),
-                        resultSet.getString("sign")
+            preparedStatement.setString(1, code);
 
-                );
-                currency = tempCurrency;
+            try (var resultSet = preparedStatement.executeQuery()) {
+                if (resultSet.next()) {
+                    return Optional.of(buildCurrency(resultSet));
+                }
+                return Optional.empty();
             }
-
-        }
-         catch (SQLException e) {
+        } catch (SQLException e) {
             throw new RuntimeException(e);
         }
-        return currency;
-
-        );
-
-
-
-
-
     }
 
-    public static CurrencyDAO getInstance(){
+    private Currency buildCurrency(ResultSet resultSet) throws SQLException {
+        return new Currency(
+                resultSet.getInt("id"),
+                resultSet.getString("code"),
+                resultSet.getString("fullname"),
+                resultSet.getString("sign")
+        );
+    }
+
+    public static CurrencyDAO getInstance() {
         return INSTANCE;
     }
 }
