@@ -35,8 +35,15 @@ public class CurrencyServlet extends HttpServlet {
             writer.write(json);
         } else {
             Optional<Currency> currency =currencyDAO.findByCode(pathInfo.substring(1));
-            String json = gson.toJson(currency);
-            writer.write(json);
+            if(currency.isPresent()){
+                String json = gson.toJson(currency.get());
+                writer.write(json);
+            } else {
+                writer.write("not found");
+            }
+
+
+
         }
 
 
