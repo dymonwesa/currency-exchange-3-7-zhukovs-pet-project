@@ -1,3 +1,4 @@
+===== ./src/main/java/org/example/servlet/CurrencyServlet.java =====
 package org.example.servlet;
 
 import com.google.gson.Gson;
@@ -32,6 +33,8 @@ public class CurrencyServlet extends HttpServlet {
 
     }
 }
+
+===== ./src/main/java/org/example/util/ConnectionManager.java =====
 package org.example.util;
 
 import java.sql.Connection;
@@ -71,6 +74,8 @@ public class ConnectionManager {
         }
     }
 }
+
+===== ./src/main/java/org/example/util/PropertiesUtil.java =====
 package org.example.util;
 
 import javax.management.RuntimeMBeanException;
@@ -104,6 +109,8 @@ public class PropertiesUtil {
 
 
 }
+
+===== ./src/main/java/org/example/dao/CurrencyDAO.java =====
 package org.example.dao;
 
 import org.example.model.Currency;
@@ -112,8 +119,10 @@ import org.example.util.ConnectionManager;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
+import java.sql.ResultSet;
 
-public class CurrencyDAO implements Dao<Integer, Currency>{
+public class CurrencyDAO implements Dao<Integer, Currency> {
 
     private static final CurrencyDAO INSTANCE = new CurrencyDAO();
 
@@ -122,23 +131,24 @@ public class CurrencyDAO implements Dao<Integer, Currency>{
             FROM currencies;
             """;
 
-    private CurrencyDAO(){
-    }
+    public static final String FIND_BY_CODE = """
+            SELECT *
+            FROM currencies
+            WHERE code = ?;
+            """;
 
+    private CurrencyDAO() {
+    }
 
     @Override
     public List<Currency> findAll() {
         List<Currency> currencies = new ArrayList<>();
-        try (var connection = ConnectionManager.get()){
-            var preparedStatement = connection.prepareStatement(FIND_ALL);
-            var resultSet = preparedStatement.executeQuery();
-            while (resultSet.next()){
-                currencies.add(new Currency(
-                        resultSet.getInt("id"),
-                        resultSet.getString("code"),
-                        resultSet.getString("fullname"),
-                        resultSet.getString("sign")
-                        ));
+        try (var connection = ConnectionManager.get();
+             var preparedStatement = connection.prepareStatement(FIND_ALL);
+             var resultSet = preparedStatement.executeQuery()) {
+
+            while (resultSet.next()) {
+                currencies.add(buildCurrency(resultSet));
             }
         } catch (SQLException e) {
             throw new RuntimeException(e);
@@ -146,14 +156,37 @@ public class CurrencyDAO implements Dao<Integer, Currency>{
         return currencies;
     }
 
-    public List<Currency> findByCode(String code){
-        return List.of();
+    public Optional<Currency> findByCode(String code) {
+        try (var connection = ConnectionManager.get();
+             var preparedStatement = connection.prepareStatement(FIND_BY_CODE)) {
+
+            preparedStatement.setString(1, code);
+
+            try (var resultSet = preparedStatement.executeQuery()) {
+                if (resultSet.next()) {
+                    return Optional.of(buildCurrency(resultSet));
+                }
+                return Optional.empty();
+            }
+        } catch (SQLException e) {
+            throw new RuntimeException(e);
+        }
     }
 
-    public static CurrencyDAO getInstance(){
+    private Currency buildCurrency(ResultSet resultSet) throws SQLException {
+        return new Currency(
+                resultSet.getInt("id"),
+                resultSet.getString("code"),
+                resultSet.getString("fullname"),
+                resultSet.getString("sign")
+        );
+    }
+
+    public static CurrencyDAO getInstance() {
         return INSTANCE;
     }
 }
+===== ./src/main/java/org/example/dao/Dao.java =====
 package org.example.dao;
 
 import java.util.List;
@@ -163,6 +196,8 @@ public interface Dao<K, T> {
 
 
 }
+
+===== ./src/main/java/org/example/model/Currency.java =====
 package org.example.model;
 
 public class Currency {
@@ -176,6 +211,9 @@ public class Currency {
         this.code = code;
         this.fullname = fullname;
         this.sign = sign;
+    }
+
+    public Currency() {
     }
 
     public int getId() {
@@ -219,4 +257,14 @@ public class Currency {
                 ", sign='" + sign + '\'' +
                 '}';
     }
+
+    public static Currency getEmpty(){
+        return new Currency(
+                -1,
+                "empty",
+                "empty",
+                "empty"
+        );
+    }
 }
+

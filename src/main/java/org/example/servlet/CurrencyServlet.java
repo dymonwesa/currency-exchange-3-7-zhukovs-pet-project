@@ -12,9 +12,10 @@ import org.example.model.Currency;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.util.List;
+import java.util.Optional;
 
 
-@WebServlet("/currency")
+@WebServlet("/currency/*")
 public class CurrencyServlet extends HttpServlet {
     private final CurrencyDAO currencyDAO = CurrencyDAO.getInstance();
 
@@ -23,12 +24,22 @@ public class CurrencyServlet extends HttpServlet {
         resp.setCharacterEncoding("UTF-8");
         resp.setContentType("text/plain; charset=UTF-8");
         PrintWriter writer = resp.getWriter();
-        List<Currency> currencies = currencyDAO.findAll();
 
        Gson gson = new Gson();
-       String json = gson.toJson(currencies);
 
-        writer.write(json);
+
+        String pathInfo = req.getPathInfo();
+        if (pathInfo == null) {
+            List<Currency> currencies = currencyDAO.findAll();
+            String json = gson.toJson(currencies);
+            writer.write(json);
+        } else {
+            Optional<Currency> currency =currencyDAO.findByCode(pathInfo.substring(1));
+            String json = gson.toJson(currency);
+            writer.write(json);
+        }
+
+
 
     }
 }
