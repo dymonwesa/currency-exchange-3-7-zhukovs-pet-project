@@ -22,7 +22,7 @@ public class CurrencyServlet extends HttpServlet {
     @Override
     protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
         resp.setCharacterEncoding("UTF-8");
-        resp.setContentType("text/plain; charset=UTF-8");
+        resp.setContentType("application/json; charset=UTF-8");
         PrintWriter writer = resp.getWriter();
 
        Gson gson = new Gson();
@@ -33,14 +33,20 @@ public class CurrencyServlet extends HttpServlet {
             List<Currency> currencies = currencyDAO.findAll();
             String json = gson.toJson(currencies);
             writer.write(json);
-        } else {
-            Optional<Currency> currency =currencyDAO.findByCode(pathInfo.substring(1));
+        } else if(pathInfo.length()==1){
+            resp.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+        }
+            else {
+            Optional<Currency> currency = currencyDAO.findByCode(pathInfo.substring(1));
             if(currency.isPresent()){
+                resp.setStatus(HttpServletResponse.SC_OK);
                 String json = gson.toJson(currency.get());
                 writer.write(json);
             } else {
-                writer.write("not found");
+                resp.setStatus(HttpServletResponse.SC_NOT_FOUND);
+                writer.write(Integer.toString(resp.getStatus()));
             }
+
 
 
 
