@@ -8,10 +8,13 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.example.dao.CurrencyDAO;
 import org.example.model.Currency;
+import org.example.util.ApiResponseUtil;
 
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 
@@ -35,6 +38,7 @@ public class CurrencyServlet extends HttpServlet {
             writer.write(json);
         } else if(pathInfo.length()==1){
             resp.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+            sendError(resp.getStatus(), "Некорректный запрос.", resp);
         }
             else {
             Optional<Currency> currency = currencyDAO.findByCode(pathInfo.substring(1));
@@ -44,7 +48,7 @@ public class CurrencyServlet extends HttpServlet {
                 writer.write(json);
             } else {
                 resp.setStatus(HttpServletResponse.SC_NOT_FOUND);
-                writer.write(Integer.toString(resp.getStatus()));
+                sendError(resp.getStatus(), "Валюта не найдена.", resp);
             }
 
 
@@ -54,5 +58,13 @@ public class CurrencyServlet extends HttpServlet {
 
 
 
+    }
+
+    public void sendError(int status, String message, HttpServletResponse resp) throws IOException {
+        Map<String, String> map = new HashMap<>();
+        map.put("message", message);
+        PrintWriter writer = resp.getWriter();
+        Gson gson = new Gson();
+        writer.write(gson.toJson(map));
     }
 }
