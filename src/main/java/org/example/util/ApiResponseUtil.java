@@ -1,27 +1,35 @@
 package org.example.util;
 
+import com.google.gson.Gson;
 import jakarta.servlet.http.HttpServletResponse;
 
+import java.io.IOException;
+import java.io.PrintWriter;
 import java.util.HashMap;
 import java.util.Map;
 
 public class ApiResponseUtil {
 
-    private static ApiResponseUtil INSTANCE = new ApiResponseUtil(); // del mb
+    private static final ApiResponseUtil INSTANCE = new ApiResponseUtil(); // del mb
 
     public static ApiResponseUtil getInstance(){
         return INSTANCE;
     }
 
-    public void sendError(int status, String message, HttpServletResponse response){
+    public void sendError(int status, String message, HttpServletResponse resp) throws IOException {
         Map<String, String> map = new HashMap<>();
-        switch (response.getStatus()) {
-            case 404 -> map.put("message", "Валюта не найдена.");
-            case 400 -> map.put("message", "Некорректный запрос.");
+        resp.setStatus(status);
+        map.put("message", message);
+        PrintWriter writer = resp.getWriter();
+        Gson gson = new Gson();
+        writer.write(gson.toJson(map));
 
-        }
+    }
 
-
+    public void sendSuccess(int status, String json, HttpServletResponse resp) throws IOException {
+        resp.setStatus(status);
+        PrintWriter writer = resp.getWriter();
+        writer.write(json);
 
     }
 

@@ -11,48 +11,41 @@ import org.example.model.Currency;
 import org.example.util.ApiResponseUtil;
 
 import java.io.IOException;
-import java.io.PrintWriter;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 
 
 @WebServlet("/currency/*")
 public class CurrencyServlet extends HttpServlet {
+    private static final String NOT_FOUND_MESSAGE = "Валюта не найдена.";
+    private static final String BAD_REQUEST_MESSAGE = "Неверный запрос.";
     private final CurrencyDAO currencyDAO = CurrencyDAO.getInstance();
+    private final ApiResponseUtil apiResponseUtil = ApiResponseUtil.getInstance();
 
     @Override
     protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
         resp.setCharacterEncoding("UTF-8");
         resp.setContentType("application/json; charset=UTF-8");
-        PrintWriter writer = resp.getWriter();
 
        Gson gson = new Gson();
-
-
         String pathInfo = req.getPathInfo();
+
+
+
         if (pathInfo == null) {
             List<Currency> currencies = currencyDAO.findAll();
             String json = gson.toJson(currencies);
-            writer.write(json);
-        } else if(pathInfo.length()==1){
-            resp.setStatus(HttpServletResponse.SC_BAD_REQUEST);
-            sendError(resp.getStatus(), "Некорректный запрос.", resp);
-        }
-            else {
+            apiResponseUtil.sendSuccess(200, json, resp);
+        } else if(pathInfo.length()==1) {
+            apiResponseUtil.sendError(400, BAD_REQUEST_MESSAGE, resp);
+        } else {
             Optional<Currency> currency = currencyDAO.findByCode(pathInfo.substring(1));
             if(currency.isPresent()){
-                resp.setStatus(HttpServletResponse.SC_OK);
                 String json = gson.toJson(currency.get());
-                writer.write(json);
+                apiResponseUtil.sendSuccess(200, json, resp);
             } else {
-                resp.setStatus(HttpServletResponse.SC_NOT_FOUND);
-                sendError(resp.getStatus(), "Валюта не найдена.", resp);
+                apiResponseUtil.sendError(404, NOT_FOUND_MESSAGE, resp);
             }
-
-
-
 
         }
 
@@ -60,11 +53,4 @@ public class CurrencyServlet extends HttpServlet {
 
     }
 
-    public void sendError(int status, String message, HttpServletResponse resp) throws IOException {
-        Map<String, String> map = new HashMap<>();
-        map.put("message", message);
-        PrintWriter writer = resp.getWriter();
-        Gson gson = new Gson();
-        writer.write(gson.toJson(map));
-    }
 }
