@@ -11,6 +11,7 @@ import org.example.model.Currency;
 import org.example.util.ApiResponseUtil;
 
 import java.io.IOException;
+import java.io.PrintWriter;
 import java.util.List;
 import java.util.Optional;
 
@@ -31,29 +32,30 @@ public class CurrencyServlet extends HttpServlet {
         resp.setContentType("application/json; charset=UTF-8");
 
        Gson gson = new Gson();
+        String servletPath = req.getServletPath();
         String pathInfo = req.getPathInfo();
-
-
-
-        if (pathInfo == null) {
+        if (servletPath.equals("/currencies")) {
             List<Currency> currencies = currencyDAO.findAll();
             String json = gson.toJson(currencies);
             apiResponseUtil.sendSuccess(200, json, resp);
             return;
-        } else if(pathInfo.length()==1) {
-            apiResponseUtil.sendError(400, BAD_REQUEST_MESSAGE, resp);
-            return;
-        } else {
-            Optional<Currency> currency = currencyDAO.findByCode(pathInfo.substring(1));
-            if(currency.isPresent()){
-                String json = gson.toJson(currency.get());
-                apiResponseUtil.sendSuccess(200, json, resp);
+        }
+        if (servletPath.equals("/currency")) {
+
+            if (pathInfo == null || pathInfo.equals("/") ) {
+                apiResponseUtil.sendError(400, BAD_REQUEST_MESSAGE, resp);
                 return;
             } else {
-                apiResponseUtil.sendError(404, NOT_FOUND_MESSAGE, resp);
-                return;
+                Optional<Currency> currency = currencyDAO.findByCode(pathInfo.substring(1));
+                if (currency.isPresent()) {
+                    String json = gson.toJson(currency.get());
+                    apiResponseUtil.sendSuccess(200, json, resp);
+                    return;
+                } else {
+                    apiResponseUtil.sendError(404, NOT_FOUND_MESSAGE, resp);
+                    return;
+                }
             }
-
         }
 
 
@@ -63,6 +65,8 @@ public class CurrencyServlet extends HttpServlet {
     protected void doPost(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
         resp.setCharacterEncoding("UTF-8");
         resp.setContentType("application/json; charset=UTF-8");
+        req.setCharacterEncoding("UTF-8");
+
         String name = req.getParameter("name");
         String code = req.getParameter("code");
         String sign = req.getParameter("sign");
