@@ -1,5 +1,7 @@
 
+
 ========== ./src/main/java/org/example/servlet/CurrencyServlet.java ==========
+
 package org.example.servlet;
 
 import com.google.gson.Gson;
@@ -10,50 +12,101 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.example.dao.CurrencyDAO;
 import org.example.model.Currency;
+import org.example.util.ApiResponseUtil;
 
 import java.io.IOException;
-import java.io.PrintWriter;
 import java.util.List;
 import java.util.Optional;
 
 
 @WebServlet("/currency/*")
 public class CurrencyServlet extends HttpServlet {
+    private static final String NOT_FOUND_MESSAGE = "Валюта не найдена.";
+    private static final String BAD_REQUEST_MESSAGE = "Неверный запрос.";
     private final CurrencyDAO currencyDAO = CurrencyDAO.getInstance();
+    private final ApiResponseUtil apiResponseUtil = ApiResponseUtil.getInstance();
 
     @Override
     protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
         resp.setCharacterEncoding("UTF-8");
         resp.setContentType("application/json; charset=UTF-8");
-        PrintWriter writer = resp.getWriter();
 
        Gson gson = new Gson();
-
-
         String pathInfo = req.getPathInfo();
+
+
+
         if (pathInfo == null) {
             List<Currency> currencies = currencyDAO.findAll();
             String json = gson.toJson(currencies);
-            writer.write(json);
+            apiResponseUtil.sendSuccess(200, json, resp);
+        } else if(pathInfo.length()==1) {
+            apiResponseUtil.sendError(400, BAD_REQUEST_MESSAGE, resp);
         } else {
             Optional<Currency> currency = currencyDAO.findByCode(pathInfo.substring(1));
             if(currency.isPresent()){
                 String json = gson.toJson(currency.get());
-                writer.write(json);
+                apiResponseUtil.sendSuccess(200, json, resp);
             } else {
-                writer.write("not found");
+                apiResponseUtil.sendError(404, NOT_FOUND_MESSAGE, resp);
             }
-
-
 
         }
 
 
 
     }
+
 }
 
+
+========== ./src/main/java/org/example/util/ApiResponseUtil.java ==========
+
+package org.example.util;
+
+import com.google.gson.Gson;
+import jakarta.servlet.http.HttpServletResponse;
+
+import java.io.IOException;
+import java.io.PrintWriter;
+import java.util.HashMap;
+import java.util.Map;
+
+public class ApiResponseUtil {
+
+    private static final ApiResponseUtil INSTANCE = new ApiResponseUtil(); // del mb
+
+    public static ApiResponseUtil getInstance(){
+        return INSTANCE;
+    }
+
+    public void sendError(int status, String message, HttpServletResponse resp) throws IOException {
+        Map<String, String> map = new HashMap<>();
+        resp.setStatus(status);
+        map.put("message", message);
+        PrintWriter writer = resp.getWriter();
+        Gson gson = new Gson();
+        writer.write(gson.toJson(map));
+
+    }
+
+    public void sendSuccess(int status, String json, HttpServletResponse resp) throws IOException {
+        resp.setStatus(status);
+        PrintWriter writer = resp.getWriter();
+        writer.write(json);
+
+    }
+
+
+
+
+
+
+}
+
+
 ========== ./src/main/java/org/example/util/ConnectionManager.java ==========
+
 package org.example.util;
 
 import java.sql.Connection;
@@ -94,7 +147,9 @@ public class ConnectionManager {
     }
 }
 
+
 ========== ./src/main/java/org/example/util/PropertiesUtil.java ==========
+
 package org.example.util;
 
 import javax.management.RuntimeMBeanException;
@@ -129,7 +184,9 @@ public class PropertiesUtil {
 
 }
 
+
 ========== ./src/main/java/org/example/dao/CurrencyDAO.java ==========
+
 package org.example.dao;
 
 import org.example.model.Currency;
@@ -205,7 +262,9 @@ public class CurrencyDAO implements Dao<Integer, Currency> {
         return INSTANCE;
     }
 }
+
 ========== ./src/main/java/org/example/dao/Dao.java ==========
+
 package org.example.dao;
 
 import java.util.List;
@@ -216,7 +275,9 @@ public interface Dao<K, T> {
 
 }
 
+
 ========== ./src/main/java/org/example/model/Currency.java ==========
+
 package org.example.model;
 
 public class Currency {
