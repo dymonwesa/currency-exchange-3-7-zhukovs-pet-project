@@ -65,7 +65,6 @@ public class CurrencyDAO implements Dao<Integer, Currency> {
     }
 
     public Currency save(Currency currency){
-
         try (Connection connection = ConnectionManager.get();
              PreparedStatement preparedStatement = connection.prepareStatement(INSERT_CURRENCY, Statement.RETURN_GENERATED_KEYS)) {
             preparedStatement.setString(1, currency.getCode());
