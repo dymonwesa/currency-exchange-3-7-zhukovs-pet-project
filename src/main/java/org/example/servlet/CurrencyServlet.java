@@ -11,7 +11,6 @@ import org.example.model.Currency;
 import org.example.util.ApiResponseUtil;
 
 import java.io.IOException;
-import java.io.PrintWriter;
 import java.util.List;
 import java.util.Optional;
 
@@ -23,6 +22,7 @@ import java.util.Optional;
 public class CurrencyServlet extends HttpServlet {
     private static final String NOT_FOUND_MESSAGE = "Валюта не найдена.";
     private static final String BAD_REQUEST_MESSAGE = "Неверный запрос.";
+    private static final String INCORRECT_PATH_MESSAGE = "Неверный путь.";
     private final CurrencyDAO currencyDAO = CurrencyDAO.getInstance();
     private final ApiResponseUtil apiResponseUtil = ApiResponseUtil.getInstance();
 
@@ -39,10 +39,9 @@ public class CurrencyServlet extends HttpServlet {
             String json = gson.toJson(currencies);
             apiResponseUtil.sendSuccess(200, json, resp);
             return;
-        }
-        if (servletPath.equals("/currency")) {
+        } else if (servletPath.equals("/currency")) {
 
-            if (pathInfo == null || pathInfo.equals("/") ) {
+            if (pathInfo == null || !pathInfo.matches("/[A-Za-z]{3}")) {
                 apiResponseUtil.sendError(400, BAD_REQUEST_MESSAGE, resp);
                 return;
             } else {
@@ -56,6 +55,8 @@ public class CurrencyServlet extends HttpServlet {
                     return;
                 }
             }
+        } else {
+            apiResponseUtil.sendError(404, INCORRECT_PATH_MESSAGE, resp);
         }
 
 
@@ -63,10 +64,13 @@ public class CurrencyServlet extends HttpServlet {
     }
     @Override
     protected void doPost(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
+        if (!req.getServletPath().equals("/currencies")) {
+            apiResponseUtil.sendError(404, INCORRECT_PATH_MESSAGE, resp);
+            return;
+        }
         resp.setCharacterEncoding("UTF-8");
         resp.setContentType("application/json; charset=UTF-8");
         req.setCharacterEncoding("UTF-8");
-
         String name = req.getParameter("name");
         String code = req.getParameter("code");
         String sign = req.getParameter("sign");
