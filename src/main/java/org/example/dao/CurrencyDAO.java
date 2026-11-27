@@ -23,12 +23,44 @@ public class CurrencyDAO implements Dao<Integer, Currency> {
             WHERE code = ?;
             """;
 
+    public static final String FIND_BY_NAME = """
+            SELECT * 
+            FROM currencies
+            WHERE fullname= ?;
+            """;
+    public static final String FIND_BY_SIGN = """
+            SELECT *
+            FROM currencies
+            WHERE sign = ?;
+    """;
+
     public static final String INSERT_CURRENCY = """
             INSERT INTO currencies(code, fullname, sign)
             VALUES (?, ?, ?);
             """;
 
     private CurrencyDAO() {
+    }
+
+
+    public boolean isCurrencyExists(Currency currency) {
+        try (var connection = ConnectionManager.get();
+        var findByNameStatement = connection.prepareStatement(FIND_BY_NAME);
+        var findByCodeStatement = connection.prepareStatement(FIND_BY_CODE)) {
+            findByNameStatement.setString(1, currency.getFullname());
+            ResultSet resultByNameSet= findByNameStatement.executeQuery();
+            findByCodeStatement.setString(1, currency.getCode());
+            ResultSet resultByCodeSet = findByCodeStatement.executeQuery();
+
+            if (resultByNameSet.next()) {
+            return true;
+        } else if (resultByCodeSet.next()){
+                return true;
+            }
+        } catch (SQLException e) {
+            throw new RuntimeException(e);
+        }
+        return false;
     }
 
     @Override

@@ -23,6 +23,7 @@ public class CurrencyServlet extends HttpServlet {
     private static final String NOT_FOUND_MESSAGE = "Валюта не найдена.";
     private static final String BAD_REQUEST_MESSAGE = "Неверный запрос.";
     private static final String INCORRECT_PATH_MESSAGE = "Неверный путь.";
+    private static final String CURRENCY_ALREADY_EXISTS_MESSAGE = "Валюта уже существует.";
     private final CurrencyDAO currencyDAO = CurrencyDAO.getInstance();
     private final ApiResponseUtil apiResponseUtil = ApiResponseUtil.getInstance();
 
@@ -74,15 +75,18 @@ public class CurrencyServlet extends HttpServlet {
         String name = req.getParameter("name");
         String code = req.getParameter("code");
         String sign = req.getParameter("sign");
+
         if (name == null || code == null || sign == null ||
                 name.isBlank() || code.isBlank() || sign.isBlank()) {
             apiResponseUtil.sendError(400, BAD_REQUEST_MESSAGE, resp);
             return;
         }
-        Currency currency = new Currency(
-                0,code,name,sign
-        );
-        Currency resultCurrency = currencyDAO.save(currency);
+        Currency saveCurrency = new Currency(0, code, name,sign);
+        if (currencyDAO.isCurrencyExists(saveCurrency)) {
+            apiResponseUtil.sendError(409, CURRENCY_ALREADY_EXISTS_MESSAGE, resp);
+            return;
+        }
+        Currency resultCurrency = currencyDAO.save(saveCurrency);
         Gson gson = new Gson();
         String json = gson.toJson(resultCurrency);
         apiResponseUtil.sendSuccess(201, json, resp);

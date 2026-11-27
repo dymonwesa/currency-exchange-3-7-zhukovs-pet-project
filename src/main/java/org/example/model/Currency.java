@@ -12,6 +12,12 @@ public class Currency {
         this.fullname = fullname;
         this.sign = sign;
     }
+    public Currency(String code, String fullname, String sign) {
+        this.id = -1;
+        this.code = code;
+        this.fullname = fullname;
+        this.sign = sign;
+    }
 
     public Currency() {
     }
