@@ -12,12 +12,6 @@ public class Currency {
         this.fullname = fullname;
         this.sign = sign;
     }
-    public Currency(String code, String fullname, String sign) {
-        this.id = -1;
-        this.code = code;
-        this.fullname = fullname;
-        this.sign = sign;
-    }
 
     public Currency() {
     }
@@ -54,22 +48,6 @@ public class Currency {
         this.sign = sign;
     }
 
-    @Override
-    public String toString() {
-        return "Currency{" +
-                "id=" + id +
-                ", code='" + code + '\'' +
-                ", fullname='" + fullname + '\'' +
-                ", sign='" + sign + '\'' +
-                '}';
-    }
 
-    public static Currency getEmpty(){
-        return new Currency(
-                -1,
-                "empty",
-                "empty",
-                "empty"
-        );
-    }
+
 }

@@ -8,7 +8,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
-public class CurrencyDAO implements Dao<Integer, Currency> {
+public class CurrencyDAO {
 
     private static final CurrencyDAO INSTANCE = new CurrencyDAO();
 
@@ -29,10 +29,10 @@ public class CurrencyDAO implements Dao<Integer, Currency> {
             WHERE fullname= ?;
             """;
     public static final String FIND_BY_SIGN = """
-            SELECT *
-            FROM currencies
-            WHERE sign = ?;
-    """;
+                    SELECT *
+                    FROM currencies
+                    WHERE sign = ?;
+            """;
 
     public static final String INSERT_CURRENCY = """
             INSERT INTO currencies(code, fullname, sign)
@@ -44,26 +44,22 @@ public class CurrencyDAO implements Dao<Integer, Currency> {
 
 
     public boolean isCurrencyExists(Currency currency) {
-        try (var connection = ConnectionManager.get();
-        var findByNameStatement = connection.prepareStatement(FIND_BY_NAME);
-        var findByCodeStatement = connection.prepareStatement(FIND_BY_CODE)) {
-            findByNameStatement.setString(1, currency.getFullname());
-            ResultSet resultByNameSet= findByNameStatement.executeQuery();
-            findByCodeStatement.setString(1, currency.getCode());
-            ResultSet resultByCodeSet = findByCodeStatement.executeQuery();
+        try (var connection = ConnectionManager.get()) {
 
-            if (resultByNameSet.next()) {
-            return true;
-        } else if (resultByCodeSet.next()){
-                return true;
+            try (var statement = connection.prepareStatement(FIND_BY_CODE)) {
+                statement.setString(1, currency.getCode());
+
+                try (var resultSet = statement.executeQuery()) {
+                    return resultSet.next();
+                }
             }
+
         } catch (SQLException e) {
             throw new RuntimeException(e);
         }
-        return false;
     }
 
-    @Override
+
     public List<Currency> findAll() {
         List<Currency> currencies = new ArrayList<>();
         try (var connection = ConnectionManager.get();
@@ -86,6 +82,7 @@ public class CurrencyDAO implements Dao<Integer, Currency> {
             preparedStatement.setString(1, code);
 
             try (var resultSet = preparedStatement.executeQuery()) {
+
                 if (resultSet.next()) {
                     return Optional.of(buildCurrency(resultSet));
                 }
@@ -96,7 +93,7 @@ public class CurrencyDAO implements Dao<Integer, Currency> {
         }
     }
 
-    public Currency save(Currency currency){
+    public Currency save(Currency currency) {
         try (Connection connection = ConnectionManager.get();
              PreparedStatement preparedStatement = connection.prepareStatement(INSERT_CURRENCY, Statement.RETURN_GENERATED_KEYS)) {
             preparedStatement.setString(1, currency.getCode());
@@ -105,7 +102,7 @@ public class CurrencyDAO implements Dao<Integer, Currency> {
             preparedStatement.executeUpdate();
 
             try (ResultSet generatedKeys = preparedStatement.getGeneratedKeys()) {
-                if(!generatedKeys.next()) {
+                if (!generatedKeys.next()) {
                     throw new SQLException("Id not generated.");
                 }
                 int id = generatedKeys.getInt("id");

@@ -11,6 +11,7 @@ import org.example.model.Currency;
 import org.example.util.ApiResponseUtil;
 
 import java.io.IOException;
+import java.sql.SQLException;
 import java.util.List;
 import java.util.Optional;
 
@@ -81,15 +82,37 @@ public class CurrencyServlet extends HttpServlet {
             apiResponseUtil.sendError(400, BAD_REQUEST_MESSAGE, resp);
             return;
         }
+        if (!code.matches("[A-Za-z]{3}")){
+            apiResponseUtil.sendError(400, BAD_REQUEST_MESSAGE, resp);
+            return;
+        }
         Currency saveCurrency = new Currency(0, code, name,sign);
         if (currencyDAO.isCurrencyExists(saveCurrency)) {
             apiResponseUtil.sendError(409, CURRENCY_ALREADY_EXISTS_MESSAGE, resp);
             return;
         }
-        Currency resultCurrency = currencyDAO.save(saveCurrency);
-        Gson gson = new Gson();
-        String json = gson.toJson(resultCurrency);
-        apiResponseUtil.sendSuccess(201, json, resp);
+        try {
+            Currency resultCurrency = currencyDAO.save(saveCurrency);
+            Gson gson = new Gson();
+            String json = gson.toJson(resultCurrency);
+            apiResponseUtil.sendSuccess(201, json, resp);
+
+        } catch (RuntimeException e) {
+
+            if (e.getCause() instanceof SQLException sqlException
+                    && "23505".equals(sqlException.getSQLState())) {
+
+                apiResponseUtil.sendError(
+                        409,
+                        "Валюта с таким кодом уже существует.",
+                        resp
+                );
+                return;
+            }
+
+            throw e;
+        }
+
 
 
     }

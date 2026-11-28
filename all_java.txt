@@ -19,10 +19,15 @@ import java.util.List;
 import java.util.Optional;
 
 
-@WebServlet("/currency/*")
+@WebServlet(urlPatterns = {
+        "/currency/*",
+        "/currencies"
+})
 public class CurrencyServlet extends HttpServlet {
     private static final String NOT_FOUND_MESSAGE = "Валюта не найдена.";
     private static final String BAD_REQUEST_MESSAGE = "Неверный запрос.";
+    private static final String INCORRECT_PATH_MESSAGE = "Неверный путь.";
+    private static final String CURRENCY_ALREADY_EXISTS_MESSAGE = "Валюта уже существует.";
     private final CurrencyDAO currencyDAO = CurrencyDAO.getInstance();
     private final ApiResponseUtil apiResponseUtil = ApiResponseUtil.getInstance();
 
@@ -32,27 +37,63 @@ public class CurrencyServlet extends HttpServlet {
         resp.setContentType("application/json; charset=UTF-8");
 
        Gson gson = new Gson();
+        String servletPath = req.getServletPath();
         String pathInfo = req.getPathInfo();
-
-
-
-        if (pathInfo == null) {
+        if (servletPath.equals("/currencies")) {
             List<Currency> currencies = currencyDAO.findAll();
             String json = gson.toJson(currencies);
             apiResponseUtil.sendSuccess(200, json, resp);
-        } else if(pathInfo.length()==1) {
-            apiResponseUtil.sendError(400, BAD_REQUEST_MESSAGE, resp);
-        } else {
-            Optional<Currency> currency = currencyDAO.findByCode(pathInfo.substring(1));
-            if(currency.isPresent()){
-                String json = gson.toJson(currency.get());
-                apiResponseUtil.sendSuccess(200, json, resp);
-            } else {
-                apiResponseUtil.sendError(404, NOT_FOUND_MESSAGE, resp);
-            }
+            return;
+        } else if (servletPath.equals("/currency")) {
 
+            if (pathInfo == null || !pathInfo.matches("/[A-Za-z]{3}")) {
+                apiResponseUtil.sendError(400, BAD_REQUEST_MESSAGE, resp);
+                return;
+            } else {
+                Optional<Currency> currency = currencyDAO.findByCode(pathInfo.substring(1));
+                if (currency.isPresent()) {
+                    String json = gson.toJson(currency.get());
+                    apiResponseUtil.sendSuccess(200, json, resp);
+                    return;
+                } else {
+                    apiResponseUtil.sendError(404, NOT_FOUND_MESSAGE, resp);
+                    return;
+                }
+            }
+        } else {
+            apiResponseUtil.sendError(404, INCORRECT_PATH_MESSAGE, resp);
         }
 
+
+
+    }
+    @Override
+    protected void doPost(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
+        if (!req.getServletPath().equals("/currencies")) {
+            apiResponseUtil.sendError(404, INCORRECT_PATH_MESSAGE, resp);
+            return;
+        }
+        resp.setCharacterEncoding("UTF-8");
+        resp.setContentType("application/json; charset=UTF-8");
+        req.setCharacterEncoding("UTF-8");
+        String name = req.getParameter("name");
+        String code = req.getParameter("code");
+        String sign = req.getParameter("sign");
+
+        if (name == null || code == null || sign == null ||
+                name.isBlank() || code.isBlank() || sign.isBlank()) {
+            apiResponseUtil.sendError(400, BAD_REQUEST_MESSAGE, resp);
+            return;
+        }
+        Currency saveCurrency = new Currency(0, code, name,sign);
+        if (currencyDAO.isCurrencyExists(saveCurrency)) {
+            apiResponseUtil.sendError(409, CURRENCY_ALREADY_EXISTS_MESSAGE, resp);
+            return;
+        }
+        Currency resultCurrency = currencyDAO.save(saveCurrency);
+        Gson gson = new Gson();
+        String json = gson.toJson(resultCurrency);
+        apiResponseUtil.sendSuccess(201, json, resp);
 
 
     }
@@ -192,11 +233,10 @@ package org.example.dao;
 import org.example.model.Currency;
 import org.example.util.ConnectionManager;
 
-import java.sql.SQLException;
+import java.sql.*;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
-import java.sql.ResultSet;
 
 public class CurrencyDAO implements Dao<Integer, Currency> {
 
@@ -213,7 +253,44 @@ public class CurrencyDAO implements Dao<Integer, Currency> {
             WHERE code = ?;
             """;
 
+    public static final String FIND_BY_NAME = """
+            SELECT * 
+            FROM currencies
+            WHERE fullname= ?;
+            """;
+    public static final String FIND_BY_SIGN = """
+            SELECT *
+            FROM currencies
+            WHERE sign = ?;
+    """;
+
+    public static final String INSERT_CURRENCY = """
+            INSERT INTO currencies(code, fullname, sign)
+            VALUES (?, ?, ?);
+            """;
+
     private CurrencyDAO() {
+    }
+
+
+    public boolean isCurrencyExists(Currency currency) {
+        try (var connection = ConnectionManager.get();
+        var findByNameStatement = connection.prepareStatement(FIND_BY_NAME);
+        var findByCodeStatement = connection.prepareStatement(FIND_BY_CODE)) {
+            findByNameStatement.setString(1, currency.getFullname());
+            ResultSet resultByNameSet= findByNameStatement.executeQuery();
+            findByCodeStatement.setString(1, currency.getCode());
+            ResultSet resultByCodeSet = findByCodeStatement.executeQuery();
+
+            if (resultByNameSet.next()) {
+            return true;
+        } else if (resultByCodeSet.next()){
+                return true;
+            }
+        } catch (SQLException e) {
+            throw new RuntimeException(e);
+        }
+        return false;
     }
 
     @Override
@@ -248,6 +325,29 @@ public class CurrencyDAO implements Dao<Integer, Currency> {
             throw new RuntimeException(e);
         }
     }
+
+    public Currency save(Currency currency){
+        try (Connection connection = ConnectionManager.get();
+             PreparedStatement preparedStatement = connection.prepareStatement(INSERT_CURRENCY, Statement.RETURN_GENERATED_KEYS)) {
+            preparedStatement.setString(1, currency.getCode());
+            preparedStatement.setString(2, currency.getFullname());
+            preparedStatement.setString(3, currency.getSign());
+            preparedStatement.executeUpdate();
+
+            try (ResultSet generatedKeys = preparedStatement.getGeneratedKeys()) {
+                if(!generatedKeys.next()) {
+                    throw new SQLException("Id not generated.");
+                }
+                int id = generatedKeys.getInt("id");
+                return new Currency(id, currency.getCode(), currency.getFullname(), currency.getSign());
+            }
+
+
+        } catch (SQLException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
 
     private Currency buildCurrency(ResultSet resultSet) throws SQLException {
         return new Currency(
@@ -288,6 +388,12 @@ public class Currency {
 
     public Currency(int id, String code, String fullname, String sign) {
         this.id = id;
+        this.code = code;
+        this.fullname = fullname;
+        this.sign = sign;
+    }
+    public Currency(String code, String fullname, String sign) {
+        this.id = -1;
         this.code = code;
         this.fullname = fullname;
         this.sign = sign;
